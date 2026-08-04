@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Models (large files)
+models/*.gguf
+models/*.bin
+models/*.safetensors
+models/cache/
+
+# Data
+data/
+
+# Fine-tuning outputs
+finetune/qwen2.5-cs-assistant-adapter/
+finetune/qwen2.5-cs-assistant-merged/
+finetune/*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+pip_log.txt
+
+# Temp
+temp/
+pip_cache/
+
+# OpenAPI generated
+openapi.json
+
+# Session files
+session-*.md

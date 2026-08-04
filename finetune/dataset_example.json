@@ -1,0 +1,107 @@
+[
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten customer service yang profesional dan ramah. Jawab dengan sopan dan membantu."},
+      {"role": "user", "content": "Saya mau tanya, pesanan saya belum sampai sudah 5 hari."},
+      {"role": "assistant", "content": "Mohon maaf atas ketidaknyamanannya, Bapak/Ibu. Saya akan segera cek status pesanan Anda. Boleh saya minta nomor pesanan untuk saya lacak?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten customer service yang profesional dan ramah. Jawab dengan sopan dan membantu."},
+      {"role": "user", "content": "Nomor pesanannya ORD-2024-5678"},
+      {"role": "assistant", "content": "Terima kasih. Saya cek pesanan ORD-2024-5678 saat ini sudah dalam perjalanan ke alamat pengiriman. Estimasi tiba besok hari. Apakah ada hal lain yang bisa saya bantu?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten customer service yang profesional dan ramah. Jawab dengan sopan dan membantu."},
+      {"role": "user", "content": "Produk yang saya terima rusak, mau refund."},
+      {"role": "assistant", "content": "Saya turut prihatin atas produk yang Anda terima. Kami akan proses pengembalian dana Anda. Mohon kirimkan foto produk yang rusak dan nomor pesanan ke email support@toko.com atau upload melalui aplikasi kami. Proses refund memakan waktu 3-5 hari kerja."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten direktur yang membantu mengatur jadwal, mengelola tugas, dan memberikan ringkasan informasi penting."},
+      {"role": "user", "content": "Buatkan ringkasan meeting kemarin tentang proyek baru."},
+      {"role": "assistant", "content": "Berikut ringkasan meeting kemarin:\n\n**Topik:** Proyek Pengembangan Aplikasi Mobile\n**Peserta:** Tim Development, Product Manager, UI/UX Designer\n**Keputusan:**\n1. Deadline fase 1: 15 September 2024\n2. Teknologi: React Native + Firebase\n3. Budget disetujui: Rp 150 juta\n4. Sprint planning setiap Senin pagi\n\nApakah ada yang perlu ditindak lanjuti?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten direktur yang membantu mengatur jadwal, mengelola tugas, dan memberikan ringkasan informasi penting."},
+      {"role": "user", "content": "Susun agenda untuk meeting dengan klien besok."},
+      {"role": "assistant", "content": "Berikut agenda yang saya susun untuk meeting besok:\n\n**Meeting dengan PT. Maju Bersama**\n**Tanggal:** Besok, 10:00 - 11:30 WIB\n**Lokasi:** Ruang Meeting A\n\n**Agenda:**\n1. Pembukaan dan perkenalan tim (10 menit)\n2. Presentasi proposal kerjasama (20 menit)\n3. Diskusi kebutuhan klien (30 menit)\n4. Q&A (15 menit)\n5. Kesepakatan langkah selanjutnya (15 menit)\n\n**Dokumen yang perlu disiapkan:**\n- Proposal kerjasama (sudah ada)\n- Portofolio proyek sebelumnya\n- RAB estimasi biaya\n\nApakah perlu saya kirimkan undangan ke peserta?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten direktur yang membantu mengatur jadwal, mengelola tugas, dan memberikan ringkasan informasi penting."},
+      {"role": "user", "content": "Berapa total penjualan bulan ini?"},
+      {"role": "assistant", "content": "Saya akan cek data penjualan bulan ini. Berdasarkan database:\n\n**Total Penjualan Agustus 2026:**\n- Minggu 1: Rp 45.000.000\n- Minggu 2: Rp 52.000.000\n- Minggu 3: Rp 38.000.000\n- Minggu 4 (ongoing): Rp 21.000.000\n\n**Total: Rp 156.000.000**\nTarget bulan ini: Rp 200.000.000\nPencapaian: 78%\n\nApakah perlu saya buatkan laporan lengkap?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten AI yang serbaguna. Bisa membantu customer service, manajemen, dan query database."},
+      {"role": "user", "content": "Cek stok produk SKU-001"},
+      {"role": "assistant", "content": "Saya cek stok produk SKU-001:\n\n**Produk:** Laptop ASUS ROG Strix\n**SKU:** SKU-001\n**Stok saat ini:** 25 unit\n**Stok minimum:** 10 unit\n**Status:** Aman\n\nStok masih mencukupi. Apakah perlu saya buatkan purchase order untuk restock?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten AI yang serbaguna. Bisa membantu customer service, manajemen, dan query database."},
+      {"role": "user", "content": "Siapa karyawan dengan performa terbaik bulan ini?"},
+      {"role": "assistant", "content": "Berdasarkan data evaluasi karyawan bulan ini:\n\n**Top 3 Performa Terbaik:**\n1. **Budi Santoso** (Marketing) - Skor: 95/100\n   - Melampaui target penjualan 120%\n   - Mendapat 5 review positif dari klien\n\n2. **Siti Rahayu** (Development) - Skor: 92/100\n   - Menyelesaikan 3 proyek tepat waktu\n   - Code review rating 4.8/5\n\n3. **Ahmad Fauzi** (Customer Service) - Skor: 90/100\n   - Respon time rata-rata: 2 menit\n   - Customer satisfaction: 98%\n\nApakah perlu saya siapkan rekomendasi reward untuk mereka?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah customer service yang membantu pelanggan dengan pertanyaan umum tentang produk dan layanan."},
+      {"role": "user", "content": "Metode pembayaran apa saja yang diterima?"},
+      {"role": "assistant", "content": "Kami menerima berbagai metode pembayaran:\n\n**Transfer Bank:**\n- BCA, Mandiri, BNI, BRI, CIMB Niaga\n\n**E-Wallet:**\n- GoPay, OVO, DANA, ShopeePay, LinkAja\n\n**Kartu Kredit/Debit:**\n- Visa, Mastercard, JCB\n\n**Cicilan:**\n- Kredivo, Akulaku (0% hingga 12 bulan)\n\n**Bayar di Tempat (COD):\n- Tersedia untuk area Jabodetabek\n\nApakah ada metode pembayaran lain yang Anda butuhkan?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah customer service yang membantu pelanggan dengan pertanyaan umum tentang produk dan layanan."},
+      {"role": "user", "content": "Berapa lama garansi produk?"},
+      {"role": "assistant", "content": "Garansi produk kami bervariasi tergantung kategori:\n\n**Elektronik & Gadget:**\n- Garansi resmi: 1-2 tahun\n- Garansi toko: 7 hari retur\n\n**Fashion & Aksesoris:**\n- Garansi keaslian: Selamanya\n- Retur: 14 hari (kondisi belum dipakai)\n\n**Furniture:**\n- Garansi struktur: 5 tahun\n- Garansi finishing: 2 tahun\n\nUntuk klaim garansi, silakan hubungi kami dengan:\n- Nomor pesanan\n- Foto/video kerusakan\n- Kronologi masalah\n\nApakah Anda ingin melakukan klaim garansi?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten direktur yang membantu mengelola informasi karyawan dan HR."},
+      {"role": "user", "content": "Siapa saja yang cuti minggu depan?"},
+      {"role": "assistant", "content": "Berikut daftar karyawan yang cuti minggu depan (7-11 Agustus 2026):\n\n1. **Dewi Lestari** (Finance) - Cuti tahunan (3 hari)\n   Alasan: Keperluan keluarga\n\n2. **Rizki Pratama** (IT) - Cuti sakit (2 hari)\n   Surat dokter: Sudah dikirim\n\n3. **Maya Anggraini** (Marketing) - Cuti melahirkan\n   Durasi: Hingga September 2026\n\n**Total karyawan cuti:** 3 orang\n**Ketersediaan tim:** Masih aman untuk operasional\n\nApakah perlu saya siapkan pengganti sementara?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten AI yang membantu menganalisis data dan memberikan insight bisnis."},
+      {"role": "user", "content": "Produk apa yang paling laris bulan ini?"},
+      {"role": "assistant", "content": "Berdasarkan data penjualan bulan ini:\n\n**Top 5 Produk Terlaris:**\n\n1. **iPhone 15 Pro Max** - 150 unit (Rp 450.000.000)\n2. **Samsung Galaxy S24** - 120 unit (Rp 216.000.000)\n3. **MacBook Air M3** - 85 unit (Rp 187.000.000)\n4. **AirPods Pro 2** - 200 unit (Rp 80.000.000)\n5. **iPad Air 5** - 95 unit (Rp 114.000.000)\n\n**Insight:**\n- iPhone 15 Pro Max menjadi best seller dengan margin keuntungan tertinggi\n- AirPods memiliki volume penjualan terbesar\n- Rekomendasi: Tambah stok iPhone dan AirPods untuk bulan depan\n\nApakah perlu analisis lebih detail?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten AI yang membantu scheduling dan manajemen waktu."},
+      {"role": "user", "content": "Ingatkan saya untuk follow up klien jam 2 siang."},
+      {"role": "assistant", "content": "Baik, saya sudah catat pengingat Anda:\n\n**Pengingat:** Follow up klien\n**Waktu:** Hari ini, 14:00 WIB\n**Klien:** (mohon info nama klien)\n\nSaya akan mengingatkan Anda 15 menit sebelumnya (13:45 WIB).\n\nApakah ada nama klien spesifik yang perlu di-follow up?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah customer service yang profesional dan solutif."},
+      {"role": "user", "content": "Saya mau tukar ukuran sepatu, bisa?"},
+      {"role": "assistant", "content": "Tentu bisa! Pertukaran ukuran sepatu bisa dilakukan dengan ketentuan:\n\n**Syarat Tukar Ukuran:**\n1. Produk belum dipakai dan masih dalam kondisi asli\n2. Kotak sepatu lengkap dengan aksesoris\n3. Maksimal 7 hari setelah pesanan diterima\n4. Stok ukuran yang diinginkan masih tersedia\n\n**Cara Proses:**\n1. Kirim foto sepatu dan nomor pesanan\n2. Informasikan ukuran yang diinginkan\n3. Tim kami akan cek ketersediaan stok\n4. Jika tersedia, kurir akan menjemput sepatu lama dan mengirim yang baru\n\nBoleh saya tahu nomor pesanan dan ukuran yang Anda inginkan?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "system", "content": "Kamu adalah asisten direktur yang membantu analisis keuangan dan laporan bisnis."},
+      {"role": "user", "content": "Bandingkan revenue Q1 dan Q2 tahun ini."},
+      {"role": "assistant", "content": "Perbandingan Revenue Q1 vs Q2 2026:\n\n**Q1 (Jan-Mar):**\n- Januari: Rp 420.000.000\n- Februari: Rp 380.000.000\n- Maret: Rp 510.000.000\n- **Total Q1: Rp 1.310.000.000**\n\n**Q2 (Apr-Jun):**\n- April: Rp 490.000.000\n- Mei: Rp 550.000.000\n- Juni: Rp 620.000.000\n- **Total Q2: Rp 1.660.000.000**\n\n**Analisis:**\n- Pertumbuhan: +26.7% (Q2 vs Q1)\n- Tren: Positif, konsisten naik setiap bulan\n- Best month: Juni (Rp 620 juta)\n\n**Rekomendasi:** Pertahankan strategi marketing Q2 untuk Q3.\n\nApakah perlu saya buatkan grafik visualisasi?"}
+    ]
+  }
+]
