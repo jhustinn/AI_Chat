@@ -221,9 +221,16 @@ pip install huggingface-hub
 mkdir models
 ```
 
-### Step 7: Download Base Model
+### Step 7: Download Models
 
+Models tersedia di Google Drive:
+
+1. Download `models.zip` dari Google Drive
+2. Ekstrak ke folder `models/` di project
+
+**ATAU download manual dari Hugging Face:**
 ```bash
+mkdir models
 python -c "
 from huggingface_hub import hf_hub_download
 hf_hub_download(
@@ -233,10 +240,6 @@ hf_hub_download(
 )
 "
 ```
-
-### Step 8: (Optional) Download Fine-Tuned Model
-
-If you have the fine-tuned model file `qwen2.5-cs-assistant.gguf`, place it in the `models/` directory.
 
 ### Step 9: Configure Server Scripts
 
