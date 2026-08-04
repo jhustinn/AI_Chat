@@ -62,3 +62,4 @@ start_chat_server.bat
 - **Inference:** llama.cpp / llama-cpp-python
 - **API:** FastAPI + Uvicorn
 - **Fine-tuning:** QLoRA (Google Colab)
+- **Model:** https://drive.google.com/file/d/1-HaEJUVZZ5Q1MfxY_y7Rykw1MCqDHnnz/view?usp=sharing
