@@ -1,0 +1,22 @@
+# AI Chat Server - Dependencies
+# Install: pip install -r requirements.txt
+
+# llama.cpp server (CPU version)
+llama-cpp-python[server] --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+
+# Web framework
+fastapi>=0.100.0
+uvicorn>=0.23.0
+httpx>=0.24.0
+
+# Hugging Face (for model download)
+huggingface-hub>=0.16.0
+
+# Fine-tuning (optional, only needed for training)
+# transformers>=4.40.0
+# peft>=0.10.0
+# bitsandbytes>=0.43.0
+# accelerate>=0.28.0
+# trl>=0.8.0
+# datasets>=2.14.0
+# torch>=2.0.0
