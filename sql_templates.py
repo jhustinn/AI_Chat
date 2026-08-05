@@ -9,13 +9,23 @@ Format prompt yang digunakan:
 Schema: PostgreSQL, semua tabel ada di schema "global"
 """
 
-# Keywords yang TIDAK ada di database — jangan generate SQL untuk ini
-# Model akan jawab "data tidak tersedia" instead of hallucinating
+# Keywords yang TIDAK ada di database dev_richz — jangan generate SQL untuk ini
+# Data ini ada di database per-aplikasi lain (richzspot_dev, fjm_dev, dll)
 UNSUPPORTED_KEYWORDS = [
-    "best seller", "terlaris", "paling laku", "produk", "menu makanan",
-    "menu minuman", "stok", "stock", "harga", "price", "invoice",
-    "struk", "receipt", "transaksi", "penjualan", "sales", "order",
-    "pembelian", "purchase", "katalog", "catalogue", "item",
+    "best seller", "terlaris", "paling laku",
+    "menu makanan", "menu minuman", "menu restoran", "daftar makanan",
+    "stok", "stock", "harga produk",
+    "invoice", "struk", "receipt",
+    "penjualan", "sales",
+    "pembelian", "purchase",
+    "katalog", "catalogue",
+    "logistik",
+]
+
+# Kata makanan/restoran — kalau ada di pertanyaan, query menu dianggap menu makanan (unsupported)
+FOOD_CONTEXT_KEYWORDS = [
+    "makanan", "minuman", "restoran", "warung", "cafe", "makan", "mie", "nasi",
+    "ayam", "soto", "bakso", "pizza", "burger", "masakan", "hidangan",
 ]
 
 # Mapping keyword → tabel yang relevan
@@ -36,7 +46,7 @@ TABLE_KEYWORDS = {
         "shift", "jadwal", "jam kerja"
     ],
     "global_menu": [
-        "menu", "fitur", "aplikasi", "modul"
+        "menu navigasi", "menu aplikasi", "fitur", "modul", "navigasi"
     ],
     "global_omset": [
         "omset", "pendapatan", "revenue", "penjualan", "sales"
@@ -96,6 +106,14 @@ FEW_SHOT_EXAMPLES = {
         ("Berapa jumlah shift?",
          "SELECT COUNT(*) AS total_shift FROM global.global_shift WHERE shift_aktif = '1'"),
     ],
+    "global_menu": [
+        ("Tampilkan menu navigasi aplikasi",
+         "SELECT menu_label, menu_href, menu_type FROM global.global_menu WHERE is_active = true ORDER BY sort_order LIMIT 10"),
+        ("Berapa jumlah menu aktif?",
+         "SELECT COUNT(*) AS total_menu FROM global.global_menu WHERE is_active = true"),
+        ("Daftar fitur aplikasi",
+         "SELECT menu_label, menu_code, menu_type FROM global.global_menu WHERE is_active = true ORDER BY sort_order LIMIT 10"),
+    ],
     "global_omset": [
         ("Berapa total omset?",
          "SELECT SUM(omset_nominal) AS total_omset FROM global.global_omset"),
@@ -124,6 +142,10 @@ def get_few_shot_prompt(question: str) -> str | None:
     if any(kw in q_lower for kw in UNSUPPORTED_KEYWORDS):
         return None
 
+    # Kata "menu" + konteks makanan = menu restoran (tidak ada di dev_richz)
+    if "menu" in q_lower and any(kw in q_lower for kw in FOOD_CONTEXT_KEYWORDS):
+        return None
+
     # Deteksi tabel yang relevan
     matched_tables = []
     for table, keywords in TABLE_KEYWORDS.items():
@@ -148,6 +170,7 @@ def get_few_shot_prompt(question: str) -> str | None:
         "global_departemen": "Table global.global_departemen (dep_id, dep_nama, dep_kota, dep_aktif, dep_telepon, deleted_at)",
         "global_master_outlet": "Table global.global_master_outlet (outlet_id, outlet_nama, outlet_kota, outlet_alamat, outlet_telepon, outlet_aktif)",
         "global_shift": "Table global.global_shift (shift_id, shift_nama, shift_jam_awal, shift_jam_akhir, shift_aktif)",
+        "global_menu": "Table global.global_menu (menu_id, menu_label, menu_code, menu_href, menu_type, sort_order, is_active)",
         "global_omset": "Table global.global_omset (omset_id, omset_nominal, omset_nominal_bawah, id_dep)",
         "global_system_activity_log": "Table global.global_system_activity_log (activity_log_id, username, action, module, severity, status, message, created_at)",
     }
