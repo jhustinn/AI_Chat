@@ -13,13 +13,9 @@ Schema: PostgreSQL, semua tabel ada di schema "global"
 # Data ini ada di database per-aplikasi lain (richzspot_dev, fjm_dev, dll)
 UNSUPPORTED_KEYWORDS = [
     "best seller", "terlaris", "paling laku",
-    "menu makanan", "menu minuman", "menu restoran", "daftar makanan",
-    "stok", "stock", "harga produk",
     "invoice", "struk", "receipt",
-    "penjualan", "sales",
     "pembelian", "purchase",
     "katalog", "catalogue",
-    "logistik",
 ]
 
 # Kata makanan/restoran — kalau ada di pertanyaan, query menu dianggap menu makanan (unsupported)
@@ -53,6 +49,10 @@ TABLE_KEYWORDS = {
     ],
     "global_system_activity_log": [
         "log", "aktivitas", "activity", "history", "riwayat", "audit"
+    ],
+    "logistik_item": [
+        "menu", "item", "produk", "makanan", "minuman", "barang", "daftar menu",
+        "harga", "stok", "katalog", "mie", "nasi", "ayam", "soto",
     ],
 }
 
@@ -128,6 +128,18 @@ FEW_SHOT_EXAMPLES = {
         ("Aktivitas user Andi",
          "SELECT action, module, status, created_at FROM global.global_system_activity_log WHERE username ILIKE '%Andi%' ORDER BY created_at DESC LIMIT 10"),
     ],
+    "logistik_item": [
+        ("Apa saja menu di Mie Aceh?",
+         "SELECT i.item_nama, i.item_harga_jual FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE d.dep_nama ILIKE '%Mie Aceh%' AND i.item_aktif = 'y' ORDER BY i.item_order LIMIT 10"),
+        ("Tampilkan produk Grey Area",
+         "SELECT i.item_nama, i.item_harga_jual, i.item_stok FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE d.dep_nama ILIKE '%Grey Area%' AND i.item_aktif = 'y' LIMIT 10"),
+        ("Berapa jumlah item aktif?",
+         "SELECT COUNT(*) AS total_item FROM logistik.logistik_item WHERE item_aktif = 'y'"),
+        ("Item dengan harga tertinggi",
+         "SELECT i.item_nama, i.item_harga_jual, d.dep_nama FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE i.item_aktif = 'y' ORDER BY i.item_harga_jual DESC LIMIT 10"),
+        ("Stok item Super Chicken",
+         "SELECT i.item_nama, i.item_stok, i.item_harga_jual FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE d.dep_nama ILIKE '%Super Chicken%' AND i.item_aktif = 'y' LIMIT 10"),
+    ],
 }
 
 
@@ -140,10 +152,6 @@ def get_few_shot_prompt(question: str) -> str | None:
 
     # Cek apakah query minta data yang tidak ada di DB
     if any(kw in q_lower for kw in UNSUPPORTED_KEYWORDS):
-        return None
-
-    # Kata "menu" + konteks makanan = menu restoran (tidak ada di dev_richz)
-    if "menu" in q_lower and any(kw in q_lower for kw in FOOD_CONTEXT_KEYWORDS):
         return None
 
     # Deteksi tabel yang relevan
@@ -173,6 +181,7 @@ def get_few_shot_prompt(question: str) -> str | None:
         "global_menu": "Table global.global_menu (menu_id, menu_label, menu_code, menu_href, menu_type, sort_order, is_active)",
         "global_omset": "Table global.global_omset (omset_id, omset_nominal, omset_nominal_bawah, id_dep)",
         "global_system_activity_log": "Table global.global_system_activity_log (activity_log_id, username, action, module, severity, status, message, created_at)",
+        "logistik_item": "Table logistik.logistik_item (item_id, item_nama, item_harga_jual, item_stok, item_aktif, id_dep) JOIN global.global_departemen d ON d.dep_id = i.id_dep (dep_id, dep_nama)",
     }
 
     for table in matched_tables[:2]:  # Max 2 tabel agar tidak overflow token
