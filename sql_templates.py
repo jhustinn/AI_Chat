@@ -45,7 +45,7 @@ TABLE_KEYWORDS = {
         "menu navigasi", "menu aplikasi", "fitur", "modul", "navigasi"
     ],
     "global_omset": [
-        "omset", "pendapatan", "revenue", "penjualan", "sales"
+        "omset", "target omset", "nominal omset"
     ],
     "global_system_activity_log": [
         "log", "aktivitas", "activity", "history", "riwayat", "audit"
@@ -53,6 +53,10 @@ TABLE_KEYWORDS = {
     "logistik_item": [
         "menu", "item", "produk", "makanan", "minuman", "barang", "daftar menu",
         "harga", "stok", "katalog", "mie", "nasi", "ayam", "soto",
+    ],
+    "logistik_faktur": [
+        "penjualan", "sales", "faktur", "transaksi", "omset", "pendapatan",
+        "total penjualan", "revenue", "pemasukan",
     ],
 }
 
@@ -140,6 +144,16 @@ FEW_SHOT_EXAMPLES = {
         ("Stok item Super Chicken",
          "SELECT i.item_nama, i.item_stok, i.item_harga_jual FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE d.dep_nama ILIKE '%Super Chicken%' AND i.item_aktif = 'y' LIMIT 10"),
     ],
+    "logistik_faktur": [
+        ("Total penjualan Mie Aceh",
+         "SELECT SUM(f.faktur_grandtotal) AS total_penjualan, COUNT(*) AS total_transaksi FROM logistik.logistik_faktur f JOIN global.global_departemen d ON d.dep_id = f.id_dep WHERE d.dep_nama ILIKE '%Mie Aceh%'"),
+        ("Daftar faktur Grey Area",
+         "SELECT f.faktur_nomor, f.faktur_tgl, f.faktur_grandtotal FROM logistik.logistik_faktur f JOIN global.global_departemen d ON d.dep_id = f.id_dep WHERE d.dep_nama ILIKE '%Grey Area%' ORDER BY f.faktur_tgl DESC LIMIT 10"),
+        ("Berapa total penjualan semua cabang?",
+         "SELECT d.dep_nama, SUM(f.faktur_grandtotal) AS total_penjualan, COUNT(*) AS total_transaksi FROM logistik.logistik_faktur f JOIN global.global_departemen d ON d.dep_id = f.id_dep GROUP BY d.dep_nama ORDER BY total_penjualan DESC LIMIT 10"),
+        ("Faktur terbaru",
+         "SELECT f.faktur_nomor, f.faktur_tgl, f.faktur_grandtotal, d.dep_nama FROM logistik.logistik_faktur f JOIN global.global_departemen d ON d.dep_id = f.id_dep ORDER BY f.faktur_tgl DESC LIMIT 10"),
+    ],
 }
 
 
@@ -154,11 +168,14 @@ def get_few_shot_prompt(question: str) -> str | None:
     if any(kw in q_lower for kw in UNSUPPORTED_KEYWORDS):
         return None
 
-    # Deteksi tabel yang relevan
+    # Deteksi tabel yang relevan, urutkan berdasarkan jumlah keyword match (score tertinggi duluan)
     matched_tables = []
     for table, keywords in TABLE_KEYWORDS.items():
-        if any(kw in q_lower for kw in keywords):
-            matched_tables.append(table)
+        score = sum(1 for kw in keywords if kw in q_lower)
+        if score > 0:
+            matched_tables.append((score, table))
+    matched_tables.sort(key=lambda x: x[0], reverse=True)
+    matched_tables = [t for _, t in matched_tables]
 
     if not matched_tables:
         return None  # Tidak ada tabel yang cocok, jangan generate SQL
@@ -182,6 +199,7 @@ def get_few_shot_prompt(question: str) -> str | None:
         "global_omset": "Table global.global_omset (omset_id, omset_nominal, omset_nominal_bawah, id_dep)",
         "global_system_activity_log": "Table global.global_system_activity_log (activity_log_id, username, action, module, severity, status, message, created_at)",
         "logistik_item": "Table logistik.logistik_item (item_id, item_nama, item_harga_jual, item_stok, item_aktif, id_dep) JOIN global.global_departemen d ON d.dep_id = i.id_dep (dep_id, dep_nama)",
+        "logistik_faktur": "Table logistik.logistik_faktur (faktur_id, faktur_nomor, faktur_tgl, faktur_grandtotal, id_dep) JOIN global.global_departemen d ON d.dep_id = f.id_dep (dep_id, dep_nama)",
     }
 
     for table in matched_tables[:2]:  # Max 2 tabel agar tidak overflow token

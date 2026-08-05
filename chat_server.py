@@ -295,17 +295,30 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
         row_count = db_result["row_count"]
 
         # Format result as natural language
+        CURRENCY_KEYWORDS = {"harga", "grandtotal", "total", "nominal", "penjualan", "subtotal", "diskon", "bayar", "kembalian", "omset", "pendapatan", "revenue"}
+
+        def fmt_value(col: str, val) -> str:
+            """Format nilai berdasarkan nama kolom — angka currency → Rp, lainnya apa adanya."""
+            from decimal import Decimal
+            if val is None:
+                return "-"
+            col_lower = col.lower()
+            is_currency = any(kw in col_lower for kw in CURRENCY_KEYWORDS)
+            if is_currency and isinstance(val, (int, float, Decimal)):
+                return f"Rp {int(val):,}".replace(",", ".")
+            return str(val)
+
         if row_count == 0:
             reply = "Tidak ada data yang ditemukan."
         elif row_count == 1 and len(columns) == 1:
-            # Single value result (e.g. COUNT)
+            # Single value result (e.g. COUNT, SUM)
+            col = columns[0]
             val = list(rows[0].values())[0]
-            reply = f"{columns[0].replace('_', ' ').title()}: **{val}**"
+            reply = f"{col.replace('_', ' ').title()}: **{fmt_value(col, val)}**"
         else:
             lines = [f"Ditemukan {row_count} data:\n"]
             for i, row in enumerate(rows[:10], 1):
-                # Format each row as "key: value, key: value"
-                parts = [f"{v}" for v in row.values()]
+                parts = [fmt_value(col, val) for col, val in row.items()]
                 lines.append(f"{i}. {' | '.join(parts)}")
             if row_count > 10:
                 lines.append(f"... dan {row_count - 10} data lainnya.")
