@@ -211,7 +211,7 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
                         json={
                             "model": "qwen2.5-cs-assistant",
                             "messages": sql_prompt,
-                            "max_tokens": 80,
+                            "max_tokens": 200,
                             "temperature": 0.1,
                             "stop": ["\n\n", "Q:", "--"],
                         }
@@ -229,6 +229,18 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
                         generated_sql = sel_match.group(1).strip() if sel_match else None
 
                     if generated_sql:
+                        # Auto-fix common column name mistakes (English → Indonesian)
+                        SQL_COLUMN_FIXES = {
+                            r'\bi\.item_name\b': 'i.item_nama',
+                            r'\bd\.dep_name\b': 'd.dep_nama',
+                            r'\bd\.department_name\b': 'd.dep_nama',
+                            r'\bm\.member_name\b': 'm.member_nama',
+                            r'\bu\.user_name\b': 'u.usr_name',
+                            r'\bo\.outlet_name\b': 'o.outlet_nama',
+                        }
+                        for pattern, replacement in SQL_COLUMN_FIXES.items():
+                            generated_sql = re.sub(pattern, replacement, generated_sql, flags=re.IGNORECASE)
+
                         logger.info(f"[{client_ip}] Generated SQL ({(datetime.now()-t_sql).total_seconds():.1f}s): {generated_sql}")
                         db_result = execute_query(generated_sql)
                         if db_result and db_result.get("success"):
@@ -295,7 +307,8 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
         row_count = db_result["row_count"]
 
         # Format result as natural language
-        CURRENCY_KEYWORDS = {"harga", "grandtotal", "total", "nominal", "penjualan", "subtotal", "diskon", "bayar", "kembalian", "omset", "pendapatan", "revenue"}
+        CURRENCY_KEYWORDS = {"harga", "grandtotal", "nilai", "nominal", "penjualan", "subtotal", "diskon", "bayar", "kembalian", "omset", "pendapatan", "revenue"}
+        QTY_KEYWORDS = {"qty", "jumlah", "count", "total_qty", "total_jumlah", "stok", "stock"}
 
         def fmt_value(col: str, val) -> str:
             """Format nilai berdasarkan nama kolom — angka currency → Rp, lainnya apa adanya."""
@@ -303,9 +316,13 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
             if val is None:
                 return "-"
             col_lower = col.lower()
+            is_qty = any(kw in col_lower for kw in QTY_KEYWORDS)
             is_currency = any(kw in col_lower for kw in CURRENCY_KEYWORDS)
-            if is_currency and isinstance(val, (int, float, Decimal)):
+            if is_currency and not is_qty and isinstance(val, (int, float, Decimal)):
                 return f"Rp {int(val):,}".replace(",", ".")
+            if isinstance(val, Decimal):
+                # Strip trailing zeros for non-currency decimals (e.g. qty 9.0000 → 9)
+                return str(val.normalize())
             return str(val)
 
         if row_count == 0:
@@ -350,7 +367,7 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
     payload = {
         "model": "qwen2.5-cs-assistant",
         "messages": messages_for_llm,
-        "max_tokens": min(req.max_tokens, 150),
+        "max_tokens": min(req.max_tokens, 300),
         "temperature": req.temperature,
     }
 

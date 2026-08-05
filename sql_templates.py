@@ -58,6 +58,11 @@ TABLE_KEYWORDS = {
         "penjualan", "sales", "faktur", "transaksi", "omset", "pendapatan",
         "total penjualan", "revenue", "pemasukan",
     ],
+    "logistik_faktur_item": [
+        "detail faktur", "item terjual", "item dibeli", "detail item", "detail penjualan",
+        "item apa", "apa saja yang terjual", "apa saja yang dibeli", "rincian",
+        "sebutkan detail", "detail nya", "summary", "item yang terjual", "item yang dibeli",
+    ],
 }
 
 # Few-shot examples per tabel: (question, sql)
@@ -154,6 +159,16 @@ FEW_SHOT_EXAMPLES = {
         ("Faktur terbaru",
          "SELECT f.faktur_nomor, f.faktur_tgl, f.faktur_grandtotal, d.dep_nama FROM logistik.logistik_faktur f JOIN global.global_departemen d ON d.dep_id = f.id_dep ORDER BY f.faktur_tgl DESC LIMIT 10"),
     ],
+    "logistik_faktur_item": [
+        ("Item apa saja yang terjual di Grey Area?",
+         "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_qty, SUM(fi.faktur_item_hna * fi.faktur_item_jumlah) AS total_nilai FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep WHERE d.dep_nama ILIKE '%Grey Area%' GROUP BY i.item_nama ORDER BY total_qty DESC LIMIT 10"),
+        ("Detail item yang dibeli di Mie Aceh",
+         "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_qty, SUM(fi.faktur_item_hna * fi.faktur_item_jumlah) AS total_nilai FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep WHERE d.dep_nama ILIKE '%Mie Aceh%' GROUP BY i.item_nama ORDER BY total_qty DESC LIMIT 10"),
+        ("Rincian item terjual semua cabang",
+         "SELECT d.dep_nama, i.item_nama, SUM(fi.faktur_item_jumlah) AS total_qty FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep GROUP BY d.dep_nama, i.item_nama ORDER BY total_qty DESC LIMIT 10"),
+        ("Total penjualan dan detail item Grey Area",
+         "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_qty, SUM(fi.faktur_item_hna * fi.faktur_item_jumlah) AS total_nilai FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep WHERE d.dep_nama ILIKE '%Grey Area%' GROUP BY i.item_nama ORDER BY total_nilai DESC LIMIT 10"),
+    ],
 }
 
 
@@ -200,6 +215,7 @@ def get_few_shot_prompt(question: str) -> str | None:
         "global_system_activity_log": "Table global.global_system_activity_log (activity_log_id, username, action, module, severity, status, message, created_at)",
         "logistik_item": "Table logistik.logistik_item (item_id, item_nama, item_harga_jual, item_stok, item_aktif, id_dep) JOIN global.global_departemen d ON d.dep_id = i.id_dep (dep_id, dep_nama)",
         "logistik_faktur": "Table logistik.logistik_faktur (faktur_id, faktur_nomor, faktur_tgl, faktur_grandtotal, id_dep) JOIN global.global_departemen d ON d.dep_id = f.id_dep (dep_id, dep_nama)",
+        "logistik_faktur_item": "Table logistik.logistik_faktur_item (faktur_item_id, id_faktur, id_item, faktur_item_jumlah, faktur_item_hna, id_dep) JOIN logistik.logistik_item i ON i.item_id = fi.id_item (item_nama) JOIN global.global_departemen d ON d.dep_id = fi.id_dep (dep_nama)",
     }
 
     for table in matched_tables[:2]:  # Max 2 tabel agar tidak overflow token
