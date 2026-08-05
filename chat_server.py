@@ -22,7 +22,7 @@ import re
 from datetime import datetime
 from rag_engine import get_rag_engine
 from db_engine import execute_query, get_schema_context
-from sql_templates import get_few_shot_prompt
+from sql_templates import get_few_shot_prompt, get_direct_sql
 
 LOG_DIR = r"E:\App\SWA\AI\logs"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -193,14 +193,30 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
     is_db_query = any(kw in req.message.lower() for kw in db_keywords)
 
     db_result = None
+    multi_sections = []  # List of {label, rows, columns} for multi-intent replies
     sql_failed = False  # Track if SQL generation was attempted but failed
     if is_db_query:
-        # Build few-shot prompt with exact table/column names + examples
-        # Returns None if query is unsupported (table doesn't exist in DB)
+        # Check direct SQL map first (hardcoded queries for complex/multi-intent patterns)
+        direct_matches = get_direct_sql(req.message)
+        if direct_matches:
+            for match in direct_matches:
+                logger.info(f"[{client_ip}] Direct SQL match: {match['label']}")
+                result = execute_query(match["sql"])
+                if result and result.get("success") and result.get("row_count", 0) > 0:
+                    multi_sections.append({
+                        "label": match["label"],
+                        "rows": result.get("rows", []),
+                        "columns": result.get("columns", []),
+                    })
+            if not multi_sections:
+                sql_failed = True
+
+        # Also run few-shot for remaining intents (penjualan, dll) even if direct SQL matched
         few_shot_prompt = get_few_shot_prompt(req.message)
         if few_shot_prompt is None:
-            logger.info(f"[{client_ip}] Query not supported by DB schema, skipping SQL gen")
-            sql_failed = True  # Tell LLM that data is not available
+            if not multi_sections:
+                logger.info(f"[{client_ip}] Query not supported by DB schema, skipping SQL gen")
+                sql_failed = True
         else:
             sql_prompt = [{"role": "user", "content": few_shot_prompt}]
             try:
@@ -247,16 +263,21 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
                             logger.info(f"[{client_ip}] DB query OK: {db_result.get('row_count', 0)} rows")
                         else:
                             logger.warning(f"[{client_ip}] DB query failed: {db_result.get('error') if db_result else 'unknown'}")
-                            sql_failed = True
+                            if not multi_sections:
+                                sql_failed = True
+                            db_result = None
                     else:
                         logger.warning(f"[{client_ip}] LLM did not return valid SQL: {raw_sql[:100]}")
-                        sql_failed = True
+                        if not multi_sections:
+                            sql_failed = True
                 else:
                     logger.error(f"[{client_ip}] SQL gen HTTP error: {sql_resp.status_code}")
-                    sql_failed = True
+                    if not multi_sections:
+                        sql_failed = True
             except Exception as e:
                 logger.error(f"[{client_ip}] SQL generation error: {type(e).__name__}: {e}")
-                sql_failed = True
+                if not multi_sections:
+                    sql_failed = True
     
     # Search chat history RAG
     relevant_context = []
@@ -300,6 +321,63 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
     # Build messages dengan context
     messages_for_llm = []
 
+    # Format helper — reused for both multi_sections and db_result
+    CURRENCY_KEYWORDS = {"harga", "grandtotal", "nilai", "nominal", "penjualan", "subtotal", "diskon", "bayar", "kembalian", "omset", "pendapatan", "revenue"}
+    QTY_KEYWORDS = {"qty", "jumlah", "count", "total_qty", "total_jumlah", "stok", "stock"}
+
+    def fmt_value(col: str, val) -> str:
+        from decimal import Decimal
+        if val is None:
+            return "-"
+        col_lower = col.lower()
+        is_qty = any(kw in col_lower for kw in QTY_KEYWORDS)
+        is_currency = any(kw in col_lower for kw in CURRENCY_KEYWORDS)
+        if is_currency and not is_qty and isinstance(val, (int, float, Decimal)):
+            return f"Rp {int(val):,}".replace(",", ".")
+        if isinstance(val, Decimal):
+            # Avoid scientific notation — convert to int if whole number
+            normalized = val.normalize()
+            if normalized == normalized.to_integral_value():
+                return str(int(normalized))
+            return str(normalized)
+        return str(val)
+
+    def fmt_rows(rows, columns) -> str:
+        row_count = len(rows)
+        if row_count == 0:
+            return "Tidak ada data yang ditemukan."
+        if row_count == 1 and len(columns) == 1:
+            col = columns[0]
+            val = list(rows[0].values())[0]
+            return f"{col.replace('_', ' ').title()}: **{fmt_value(col, val)}**"
+        lines = [f"Ditemukan {row_count} data:\n"]
+        for i, row in enumerate(rows[:10], 1):
+            parts = [fmt_value(col, val) for col, val in row.items()]
+            lines.append(f"{i}. {' | '.join(parts)}")
+        if row_count > 10:
+            lines.append(f"... dan {row_count - 10} data lainnya.")
+        return "\n".join(lines)
+
+    # Multi-section reply (direct SQL results with labels)
+    if multi_sections:
+        sections_reply = []
+        for section in multi_sections:
+            section_text = f"**{section['label']}:**\n{fmt_rows(section['rows'], section['columns'])}"
+            sections_reply.append(section_text)
+        reply = "\n\n".join(sections_reply)
+        history.append({"role": "assistant", "content": reply})
+        save_room(room_id)
+        rag.add_message(room_id, "assistant", reply, len(history) - 1)
+        logger.info(f"[{client_ip}] Multi-section reply | sections={len(multi_sections)}")
+        return {
+            "room_id": room_id,
+            "reply": reply,
+            "history_count": len([m for m in history if m["role"] != "system"]),
+            "rag_context_count": len(relevant_context),
+            "db_query": None,
+            "db_rows": sum(len(s["rows"]) for s in multi_sections),
+        }
+
     # If DB query succeeded, format answer directly (skip second LLM call for speed)
     if db_result and db_result.get("success"):
         rows = db_result["rows"]
@@ -321,8 +399,12 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
             if is_currency and not is_qty and isinstance(val, (int, float, Decimal)):
                 return f"Rp {int(val):,}".replace(",", ".")
             if isinstance(val, Decimal):
-                # Strip trailing zeros for non-currency decimals (e.g. qty 9.0000 → 9)
-                return str(val.normalize())
+                # Strip trailing zeros, avoid scientific notation
+                normalized = val.normalize()
+                # If it's an integer value, return as int string
+                if normalized == normalized.to_integral_value():
+                    return str(int(normalized))
+                return str(normalized)
             return str(val)
 
         if row_count == 0:

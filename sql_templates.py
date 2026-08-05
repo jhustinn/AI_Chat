@@ -12,11 +12,67 @@ Schema: PostgreSQL, semua tabel ada di schema "global"
 # Keywords yang TIDAK ada di database dev_richz — jangan generate SQL untuk ini
 # Data ini ada di database per-aplikasi lain (richzspot_dev, fjm_dev, dll)
 UNSUPPORTED_KEYWORDS = [
-    "best seller", "terlaris", "paling laku",
     "invoice", "struk", "receipt",
     "pembelian", "purchase",
     "katalog", "catalogue",
 ]
+
+# Direct SQL map — keyword pattern → hardcoded SQL (bypass LLM untuk query yang terlalu kompleks)
+# Key = tuple of keywords yang harus ada di query (AND logic)
+# Value = SQL yang langsung dieksekusi
+DIRECT_SQL_MAP = [
+    # Stok menipis
+    {
+        "keywords": ["stok", "menipis"],
+        "label": "Item dengan stok menipis",
+        "sql": "SELECT i.item_nama, i.item_stok, d.dep_nama FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE i.item_aktif = 'y' AND i.item_stok < 10 ORDER BY i.item_stok ASC LIMIT 10",
+    },
+    {
+        "keywords": ["stok", "habis"],
+        "label": "Item dengan stok habis",
+        "sql": "SELECT i.item_nama, i.item_stok, d.dep_nama FROM logistik.logistik_item i JOIN global.global_departemen d ON d.dep_id = i.id_dep WHERE i.item_aktif = 'y' AND i.item_stok = 0 ORDER BY d.dep_nama LIMIT 10",
+    },
+    # Item terlaris
+    {
+        "keywords": ["terlaris"],
+        "label": "Item paling laris",
+        "sql": "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_terjual, d.dep_nama FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep GROUP BY i.item_nama, d.dep_nama ORDER BY total_terjual DESC LIMIT 10",
+    },
+    {
+        "keywords": ["paling laku"],
+        "label": "Item paling laku",
+        "sql": "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_terjual, d.dep_nama FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep GROUP BY i.item_nama, d.dep_nama ORDER BY total_terjual DESC LIMIT 10",
+    },
+    {
+        "keywords": ["best seller"],
+        "label": "Best seller",
+        "sql": "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_terjual, d.dep_nama FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep GROUP BY i.item_nama, d.dep_nama ORDER BY total_terjual DESC LIMIT 10",
+    },
+    {
+        "keywords": ["paling laris"],
+        "label": "Item paling laris",
+        "sql": "SELECT i.item_nama, SUM(fi.faktur_item_jumlah) AS total_terjual, d.dep_nama FROM logistik.logistik_faktur_item fi JOIN logistik.logistik_item i ON i.item_id = fi.id_item JOIN global.global_departemen d ON d.dep_id = fi.id_dep GROUP BY i.item_nama, d.dep_nama ORDER BY total_terjual DESC LIMIT 10",
+    },
+    # Total penjualan per cabang — hanya satu entry, lebih spesifik
+    {
+        "keywords": ["penjualan", "cabang"],
+        "label": "Penjualan per cabang",
+        "sql": "SELECT d.dep_nama, SUM(f.faktur_grandtotal) AS total_penjualan, COUNT(*) AS total_transaksi FROM logistik.logistik_faktur f JOIN global.global_departemen d ON d.dep_id = f.id_dep GROUP BY d.dep_nama ORDER BY total_penjualan DESC LIMIT 10",
+    },
+]
+
+
+def get_direct_sql(question: str) -> list[dict] | None:
+    """
+    Cek apakah pertanyaan cocok dengan DIRECT_SQL_MAP.
+    Returns list of {label, sql} jika ada match, None jika tidak.
+    """
+    q_lower = question.lower()
+    matches = []
+    for entry in DIRECT_SQL_MAP:
+        if all(kw in q_lower for kw in entry["keywords"]):
+            matches.append({"label": entry["label"], "sql": entry["sql"]})
+    return matches if matches else None
 
 # Kata makanan/restoran — kalau ada di pertanyaan, query menu dianggap menu makanan (unsupported)
 FOOD_CONTEXT_KEYWORDS = [
