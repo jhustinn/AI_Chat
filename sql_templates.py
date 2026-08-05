@@ -9,6 +9,15 @@ Format prompt yang digunakan:
 Schema: PostgreSQL, semua tabel ada di schema "global"
 """
 
+# Keywords yang TIDAK ada di database — jangan generate SQL untuk ini
+# Model akan jawab "data tidak tersedia" instead of hallucinating
+UNSUPPORTED_KEYWORDS = [
+    "best seller", "terlaris", "paling laku", "produk", "menu makanan",
+    "menu minuman", "stok", "stock", "harga", "price", "invoice",
+    "struk", "receipt", "transaksi", "penjualan", "sales", "order",
+    "pembelian", "purchase", "katalog", "catalogue", "item",
+]
+
 # Mapping keyword → tabel yang relevan
 TABLE_KEYWORDS = {
     "global_member": [
@@ -104,13 +113,16 @@ FEW_SHOT_EXAMPLES = {
 }
 
 
-def get_few_shot_prompt(question: str) -> str:
+def get_few_shot_prompt(question: str) -> str | None:
     """
     Buat prompt few-shot berdasarkan pertanyaan user.
-    Deteksi tabel yang relevan, ambil schema + contoh SQL-nya.
-    Returns string prompt siap pakai untuk LLM.
+    Returns None jika query tidak didukung (tabel tidak ada di DB).
     """
     q_lower = question.lower()
+
+    # Cek apakah query minta data yang tidak ada di DB
+    if any(kw in q_lower for kw in UNSUPPORTED_KEYWORDS):
+        return None
 
     # Deteksi tabel yang relevan
     matched_tables = []
@@ -119,8 +131,7 @@ def get_few_shot_prompt(question: str) -> str:
             matched_tables.append(table)
 
     if not matched_tables:
-        # Fallback: pakai member dan departemen sebagai default
-        matched_tables = ["global_member", "global_departemen"]
+        return None  # Tidak ada tabel yang cocok, jangan generate SQL
 
     # Build prompt
     lines = [

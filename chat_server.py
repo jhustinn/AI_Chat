@@ -196,54 +196,55 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
     sql_failed = False  # Track if SQL generation was attempted but failed
     if is_db_query:
         # Build few-shot prompt with exact table/column names + examples
+        # Returns None if query is unsupported (table doesn't exist in DB)
         few_shot_prompt = get_few_shot_prompt(req.message)
-        sql_prompt = [
-            {"role": "user", "content": few_shot_prompt}
-        ]
-        try:
-            t_sql = datetime.now()
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                sql_resp = await client.post(
-                    f"{LLAMA_SERVER}/v1/chat/completions",
-                    json={
-                        "model": "qwen2.5-cs-assistant",
-                        "messages": sql_prompt,
-                        "max_tokens": 80,
-                        "temperature": 0.1,
-                        "stop": ["\n\n", "Q:", "--"],  # Stop at next question or comment
-                    }
-                )
-            if sql_resp.status_code == 200:
-                raw_sql = sql_resp.json()["choices"][0]["message"]["content"].strip()
-                logger.info(f"[{client_ip}] Raw SQL response: {raw_sql[:150]}")
-                # Extract SQL from response (handle markdown code blocks)
-                sql_match = re.search(r"```(?:sql)?\s*(SELECT.*?)```", raw_sql, re.IGNORECASE | re.DOTALL)
-                if sql_match:
-                    generated_sql = sql_match.group(1).strip()
-                elif raw_sql.upper().startswith("SELECT"):
-                    generated_sql = raw_sql.split(";")[0].strip()
-                else:
-                    # Try to find SELECT anywhere in response
-                    sel_match = re.search(r"(SELECT\s+.+?)(?:;|$)", raw_sql, re.IGNORECASE | re.DOTALL)
-                    generated_sql = sel_match.group(1).strip() if sel_match else None
-
-                if generated_sql:
-                    logger.info(f"[{client_ip}] Generated SQL ({(datetime.now()-t_sql).total_seconds():.1f}s): {generated_sql}")
-                    db_result = execute_query(generated_sql)
-                    if db_result and db_result.get("success"):
-                        logger.info(f"[{client_ip}] DB query OK: {db_result.get('row_count', 0)} rows")
+        if few_shot_prompt is None:
+            logger.info(f"[{client_ip}] Query not supported by DB schema, skipping SQL gen")
+            sql_failed = True  # Tell LLM that data is not available
+        else:
+            sql_prompt = [{"role": "user", "content": few_shot_prompt}]
+            try:
+                t_sql = datetime.now()
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    sql_resp = await client.post(
+                        f"{LLAMA_SERVER}/v1/chat/completions",
+                        json={
+                            "model": "qwen2.5-cs-assistant",
+                            "messages": sql_prompt,
+                            "max_tokens": 80,
+                            "temperature": 0.1,
+                            "stop": ["\n\n", "Q:", "--"],
+                        }
+                    )
+                if sql_resp.status_code == 200:
+                    raw_sql = sql_resp.json()["choices"][0]["message"]["content"].strip()
+                    logger.info(f"[{client_ip}] Raw SQL response: {raw_sql[:150]}")
+                    sql_match = re.search(r"```(?:sql)?\s*(SELECT.*?)```", raw_sql, re.IGNORECASE | re.DOTALL)
+                    if sql_match:
+                        generated_sql = sql_match.group(1).strip()
+                    elif raw_sql.upper().startswith("SELECT"):
+                        generated_sql = raw_sql.split(";")[0].strip()
                     else:
-                        logger.warning(f"[{client_ip}] DB query failed: {db_result.get('error') if db_result else 'unknown'}")
+                        sel_match = re.search(r"(SELECT\s+.+?)(?:;|$)", raw_sql, re.IGNORECASE | re.DOTALL)
+                        generated_sql = sel_match.group(1).strip() if sel_match else None
+
+                    if generated_sql:
+                        logger.info(f"[{client_ip}] Generated SQL ({(datetime.now()-t_sql).total_seconds():.1f}s): {generated_sql}")
+                        db_result = execute_query(generated_sql)
+                        if db_result and db_result.get("success"):
+                            logger.info(f"[{client_ip}] DB query OK: {db_result.get('row_count', 0)} rows")
+                        else:
+                            logger.warning(f"[{client_ip}] DB query failed: {db_result.get('error') if db_result else 'unknown'}")
+                            sql_failed = True
+                    else:
+                        logger.warning(f"[{client_ip}] LLM did not return valid SQL: {raw_sql[:100]}")
                         sql_failed = True
                 else:
-                    logger.warning(f"[{client_ip}] LLM did not return valid SQL: {raw_sql[:100]}")
+                    logger.error(f"[{client_ip}] SQL gen HTTP error: {sql_resp.status_code}")
                     sql_failed = True
-            else:
-                logger.error(f"[{client_ip}] SQL gen HTTP error: {sql_resp.status_code}")
+            except Exception as e:
+                logger.error(f"[{client_ip}] SQL generation error: {type(e).__name__}: {e}")
                 sql_failed = True
-        except Exception as e:
-            logger.error(f"[{client_ip}] SQL generation error: {type(e).__name__}: {e}")
-            sql_failed = True
     
     # Search chat history RAG
     relevant_context = []
@@ -266,6 +267,23 @@ async def send_message(room_id: str, req: ChatRequest, request: Request):
     sys_msgs = [m for m in history if m["role"] == "system"][:1]
     other_msgs = [m for m in history if m["role"] != "system"]
     recent = sys_msgs + other_msgs[-MAX_HISTORY:]
+
+    # If it was a DB query but failed/unsupported, return directly without LLM
+    # (prevents hallucination on data questions)
+    if is_db_query and sql_failed:
+        reply = "Maaf, data tersebut tidak tersedia di database kami saat ini."
+        history.append({"role": "assistant", "content": reply})
+        save_room(room_id)
+        rag.add_message(room_id, "assistant", reply, len(history) - 1)
+        logger.info(f"[{client_ip}] DB query failed/unsupported, returning safe reply")
+        return {
+            "room_id": room_id,
+            "reply": reply,
+            "history_count": len([m for m in history if m["role"] != "system"]),
+            "rag_context_count": 0,
+            "db_query": None,
+            "db_rows": None,
+        }
 
     # Build messages dengan context
     messages_for_llm = []
